@@ -818,6 +818,7 @@ WINE_CFLAGS += \
 
 WINE_AUTOCONF_ARGS = \
   --with-mingw \
+  --with-wayland \
   --disable-tests
 
 WINE_AUTOCONF_ARGS += \
