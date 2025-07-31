@@ -47,7 +47,7 @@ jobs:
       working-directory: ./build
       env:
         CFLAGS: -O2 -march=${{ inputs.cpu_arch }} -mtune=${{ inputs.cpu_tune }}
-        RUSTFLAGS: -Copt-level=2 -Ctarget-cpu=${{ inputs.cpu_arch }}
+        RUSTFLAGS: -Copt-level=3 -Ctarget-cpu=nocona
         USE_LTO: 0
       run: |
         ../configure.sh --build-name=${{ inputs.name }} --enable-ccache --container-engine=docker
