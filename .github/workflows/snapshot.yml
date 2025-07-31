@@ -43,9 +43,15 @@ jobs:
           - name: proton-${{ needs.version.outputs.full_desc }}-x86_64
             cpu_arch: nocona
             cpu_tune: core-avx2
-          - name: proton-${{ needs.version.outputs.full_desc }}-x86_64_v3
-            cpu_arch: core-avx2
+          - name: proton-${{ needs.version.outputs.full_desc }}-x86_64_v2
+            cpu_arch: x86-64-v2
             cpu_tune: core-avx2
+          - name: proton-${{ needs.version.outputs.full_desc }}-x86_64_v3
+            cpu_arch: x86-64-v3
+            cpu_tune: core-avx2
+          - name: proton-${{ needs.version.outputs.full_desc }}-x86_64_v4
+            cpu_arch: x86-64-v4
+            cpu_tune: skylake-avx512
     uses: ./.github/workflows/_job_build.yml
     with:
       name: ${{ matrix.name }}
