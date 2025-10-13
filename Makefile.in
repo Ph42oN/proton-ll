@@ -805,7 +805,6 @@ WINE_SOURCE_ARGS = \
   --exclude server/request_trace.h \
 
 WINE_CFLAGS += \
-  -DNDEBUG \
   -Wno-incompatible-pointer-types \
 
 WINE_AUTOCONF_ARGS = \
