@@ -26,9 +26,6 @@ jobs:
           - name: proton-${{ github.ref_name }}-x86_64_v3
             cpu_arch: x86-64-v3
             cpu_tune: core-avx2
-          - name: proton-${{ github.ref_name }}-x86_64_v4
-            cpu_arch: x86-64-v4
-            cpu_tune: skylake-avx512
     uses: ./.github/workflows/_job_build.yml
     with:
       name: ${{ matrix.name }}
@@ -73,7 +70,6 @@ jobs:
           - name: proton-${{ github.ref_name }}-x86_64
           - name: proton-${{ github.ref_name }}-x86_64_v2
           - name: proton-${{ github.ref_name }}-x86_64_v3
-          - name: proton-${{ github.ref_name }}-x86_64_v4
     uses: ./.github/workflows/_job_upload.yml
     with:
       version: ${{ github.ref_name }}
