@@ -16,3 +16,13 @@ pushd "$here"/../dxvk-gplasync || exit 1
     patch_cmd "$here"/gplasync/dxvk-gplasync-2.7-1.patch
 popd || exit 1
 
+pushd "$here"/../wine || exit 1
+
+if [ -d "$here/spritz" ]; then
+    mapfile -t patches < <(find "$here/spritz" -type f -name "*.patch" | sort)
+    for patch in "${patches[@]}"; do
+        patch_cmd "$patch"
+    done
+fi
+
+popd || exit 1
