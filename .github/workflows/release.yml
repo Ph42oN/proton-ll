@@ -72,6 +72,6 @@ jobs:
           direction: upload
           url: https://dawn.wine
           repo: dawn-winery/dwproton
-          token: ${{ secrets.WRITE_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ github.ref_name }}
           release-dir: ./artifacts
