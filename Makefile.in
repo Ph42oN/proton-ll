@@ -63,6 +63,7 @@ CFLAGS += -s -ffunction-sections -fdata-sections -fno-omit-frame-pointer
 CFLAGS += -ffile-prefix-map=$(CCACHE_BASEDIR)=.
 CFLAGS += -Wl,--exclude-libs=libstdc++.a
 CFLAGS += -D_TIME_BITS=64 -D_FILE_OFFSET_BITS=64
+CFLAGS += -w -fcompare-debug-second
 
 ifneq ($(SUPPRESS_WARNINGS),)
 	CFLAGS += -w
