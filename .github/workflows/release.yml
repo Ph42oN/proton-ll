@@ -70,8 +70,5 @@ jobs:
         uses: actions/forgejo-release@v2.7.3
         with:
           direction: upload
-          url: https://dawn.wine
-          repo: dawn-winery/dwproton
-          token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ github.ref_name }}
           release-dir: ./artifacts
