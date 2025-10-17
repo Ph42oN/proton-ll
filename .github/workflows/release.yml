@@ -63,7 +63,7 @@ jobs:
     if: github.ref_type == 'tag'
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v3
+        uses: forgejo/download-artifact@v4
         with:
           path: ./artifacts
           merge-multiple: true
