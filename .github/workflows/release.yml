@@ -65,10 +65,11 @@ jobs:
       - name: Download all artifacts
         uses: actions/download-artifact@v3
         with:
-          path: ./artifacts/
+          path: ./artifacts
+          merge-multiple: true
       - name: Create release
         uses: actions/forgejo-release@v2.7.3
         with:
           direction: upload
           tag: ${{ github.ref_name }}
-          release-dir: ./artifacts/*
+          release-dir: ./artifacts
