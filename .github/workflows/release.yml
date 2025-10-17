@@ -67,8 +67,11 @@ jobs:
         with:
           path: ./artifacts/
       - name: Create release
-        uses: https://github.com/softprops/action-gh-release@v2.2.1
+        uses: actions/forgejo-release@v2.7.3
         with:
-          files: ./artifacts/*
-          name: ${{ github.ref_name }}
-          make_latest: true
+          direction: upload
+          url: https://dawn.wine
+          repo: dawn-winery/dwproton
+          token: ${{ secrets.WRITE_TOKEN }}
+          tag: ${{ github.ref_name }}
+          release-dir: ./artifacts
