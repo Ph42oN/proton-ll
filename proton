@@ -1117,6 +1117,12 @@ class CompatData:
                     try_copy(g_proton.default_pfx_dir + "drive_c/windows/syswow64/" + f + ".dll", "drive_c/windows/syswow64",
                             prefix=self.prefix_dir, track_file=tracked_files, link_debug=True)
 
+                use_dxvk_gplasync = "dxvkgplasync" in g_session.compat_config
+                if use_dxvk_gplasync:
+                    dxvk_path = "dxvk-gplasync/"
+                else:
+                    dxvk_path = "dxvk/"
+
                 use_dxvk_sarek = "dxvksarek" in g_session.compat_config
                 if use_dxvk_sarek:
                     use_nvapi = False
@@ -1739,6 +1745,7 @@ class Session:
         self.check_environment("PROTON_NO_D3D11", "nod3d11")
         self.check_environment("PROTON_NO_D3D10", "nod3d10")
         self.check_environment("PROTON_DXVK_SAREK", "dxvksarek")
+        self.check_environment("PROTON_DXVK_GPLASYNC", "dxvkgplasync")
         self.check_environment("PROTON_NO_ESYNC", "noesync")
         self.check_environment("PROTON_NO_FSYNC", "nofsync")
         self.check_environment("PROTON_NO_NTSYNC", "ntsync")
@@ -1835,6 +1842,9 @@ class Session:
                     del self.env["SDL_GAMECONTROLLER_IGNORE_DEVICES"]
                 if "hdr" in self.compat_config:
                     self.env["DXVK_HDR"] = "1"
+
+        if "dxvkgplasync" in self.compat_config:
+            self.env["DXVK_ASYNC"] = "1"
 
         if "localshadercache" in self.compat_config:
             setup_local_shader_cache(self.env)
