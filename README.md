@@ -5,9 +5,14 @@ Dawn Winery's custom Proton fork with fixes for slop games :xdd:
 Features:
 - Based on [Proton-CachyOS](https://github.com/CachyOS/proton-cachyos)
 - Includes latest fixes for games by the Dawn Winery team :pog:
-- Many QoL patches (coming soon)
+- Many QoL additions, including [dxvk-gplasync](https://gitlab.com/Ph42oN/dxvk-gplasync)
 
 <img width="451" height="561" alt="image" src="https://github.com/user-attachments/assets/cbdc69f9-8d23-45b6-814a-63b75026c30c" />
+
+New environmental variables
+------------
+- `PROTON_DXVK_GPLASYNC=1`: enables dvxk-gplasync
+- `PROTON_NO_NTSYNC=1`: disables NTsync, fallbacks to fsync
 
 Building locally
 ------------
