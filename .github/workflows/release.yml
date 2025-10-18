@@ -63,13 +63,16 @@ jobs:
     if: github.ref_type == 'tag'
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v3
         with:
           path: ./artifacts
-          merge-multiple: true
+      - name: Merge
+        run: |
+          mkdir upload
+          mv ./artifacts/* ./upload
       - name: Create release
         uses: actions/forgejo-release@v2.7.3
         with:
           direction: upload
           tag: ${{ github.ref_name }}
-          release-dir: ./artifacts
+          release-dir: ./upload
