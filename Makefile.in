@@ -949,8 +949,8 @@ DXVK_GPLASYNC_SOURCE_ARGS = \
   --exclude version.h.in \
 
 DXVK_GPLASYNC_MESON_ARGS = -Db_ndebug=true --force-fallback-for=libdisplay-info
-DXVK_GPLASYNC_i386_MESON_ARGS = --bindir=$(DXVK_i386_DST)/lib/wine/dxvk/i386-windows
-DXVK_GPLASYNC_x86_64_MESON_ARGS = --bindir=$(DXVK_x86_64_DST)/lib/wine/dxvk/x86_64-windows
+DXVK_GPLASYNC_i386_MESON_ARGS = --bindir=$(DXVK_GPLASYNC_i386_DST)/lib/wine/dxvk-gplasync/i386-windows
+DXVK_GPLASYNC_x86_64_MESON_ARGS = --bindir=$(DXVK_GPLASYNC_x86_64_DST)/lib/wine/dxvk-gplasync/x86_64-windows
 DXVK_GPLASYNC_HOST_DEPENDS = glslang
 
 DXVK_GPLASYNC_i386_CFLAGS = -O3 -mno-avx -mpreferred-stack-boundary=2

@@ -1843,9 +1843,6 @@ class Session:
                 if "hdr" in self.compat_config:
                     self.env["DXVK_HDR"] = "1"
 
-        if "dxvkgplasync" in self.compat_config:
-            self.env["DXVK_ASYNC"] = "1"
-
         if "localshadercache" in self.compat_config:
             setup_local_shader_cache(self.env)
 
