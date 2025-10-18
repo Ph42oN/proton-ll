@@ -69,7 +69,7 @@ jobs:
       - name: Merge
         run: |
           mkdir upload
-          mv ./artifacts/* ./upload
+          mv ./artifacts/*/* ./upload
       - name: Create release
         uses: actions/forgejo-release@v2.7.3
         with:
