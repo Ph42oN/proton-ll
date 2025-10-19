@@ -1,6 +1,6 @@
 # dwproton
 
-Dawn Winery's custom Proton fork with fixes for slop games :xdd:
+Dawn Winery's custom Proton fork with fixes for various games :xdd:
 
 Features:
 - Based on [Proton-CachyOS](https://github.com/CachyOS/proton-cachyos)
