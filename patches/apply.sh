@@ -12,3 +12,7 @@ pushd "$here"/../glslang || exit 1
     patch_cmd "$here"/glslang/glslang-renderdoc-1.36-gcc15-fix.patch
 popd || exit 1
 
+pushd "$here"/../dxvk-gplasync || exit 1
+    patch_cmd "$here"/gplasync/dxvk-gplasync-2.7-1.patch
+popd || exit 1
+
