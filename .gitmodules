@@ -101,3 +101,6 @@
 [submodule "dxvk-gplasync"]
 	path = dxvk-gplasync
 	url = https://github.com/doitsujin/dxvk.git
+[submodule "libpcap"]
+	path = libpcap
+	url = https://github.com/the-tcpdump-group/libpcap.git
