@@ -465,6 +465,15 @@ $(eval $(call rules-source,kaldi,$(SRCDIR)/kaldi))
 $(eval $(call rules-cmake,kaldi,i386,unix))
 $(eval $(call rules-cmake,kaldi,x86_64,unix))
 
+# Kaldi calls cmake/gen_cmake_skeleton.py as a part of cmake invocation which
+# generates a bunch of cmake files in the source directory that are later
+# included. This causes sporadic failures as builds for all architectures share
+# the same source directory.
+#
+# The below assures that only a single configure/build step can run at a time.
+$(OBJ)/.kaldi-x86_64-configure: $(OBJ)/.kaldi-i386-configure
+$(OBJ)/.kaldi-i386-build: $(OBJ)/.kaldi-x86_64-configure
+$(OBJ)/.kaldi-i386-build: $(OBJ)/.kaldi-x86_64-build
 
 ##
 ## vosk
