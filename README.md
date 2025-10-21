@@ -13,6 +13,9 @@ New environmental variables
 ------------
 - `PROTON_DXVK_GPLASYNC=1`: enables dvxk-gplasync
 - `PROTON_NO_NTSYNC=1`: disables NTsync, fallbacks to fsync
+- `WINE_USE_TAKE_FOCUS=1`: enables a fix for games dropping inputs after alt-tab
+- `WINE_DISABLE_DISCONNECT=1`: disable the disconnecting trick enabled by default for certain games
+- `WINE_ENABLE_DISCONNECT=1`: enable the disconnecting trick for any game
 - `WINE_CANONICAL_HOLE="skip_volatile_check"`: boosts performance up to 200%
 
 Building locally
