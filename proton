@@ -1313,6 +1313,7 @@ def default_compat_config():
                 "429660", #Tales of Berseria
                 "1286220", #Sea Power
                 "2827230", #Wild Assault
+                "3159330", #Assassin's Creed Shadows
                 ]:
             ret.add("gamedrive")
 
