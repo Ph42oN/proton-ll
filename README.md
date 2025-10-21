@@ -6,6 +6,8 @@ Features:
 - Based on [Proton-CachyOS](https://github.com/CachyOS/proton-cachyos)
 - Includes latest fixes for games by the Dawn Winery team :pog:
 - Many QoL additions, including [dxvk-gplasync](https://gitlab.com/Ph42oN/dxvk-gplasync)
+- Includes fixes for high CPU usage in HoYo games
+- Breaks Marvel Rivals 🚀
 
 <img width="451" height="561" alt="image" src="https://github.com/user-attachments/assets/cbdc69f9-8d23-45b6-814a-63b75026c30c" />
 
@@ -13,7 +15,13 @@ New environmental variables
 ------------
 - `PROTON_DXVK_GPLASYNC=1`: enables dvxk-gplasync
 - `PROTON_NO_NTSYNC=1`: disables NTsync, fallbacks to fsync
-- `WINE_CANONICAL_HOLE="skip_volatile_check"`: boosts performance up to 200%
+- `PROTON_DISABLE_AEDEBUG=1`: disables AeDebug, fixes issues with specific games
+- `WINE_USE_TAKE_FOCUS=1`: enables a fix for games dropping inputs after alt-tab
+- `WINE_DISABLE_DISCONNECT=1`: disable the disconnecting trick enabled by default for certain games
+- `WINE_ENABLE_DISCONNECT=1`: enable the disconnecting trick for any game
+- `WINE_CANONICAL_HOLE="skip_volatile_check"`: boosts performance up to 200% (:xdd:)
+
+Recommended to use `UMU_USE_STEAM=1` when launching GI outside of Steam.
 
 Building locally
 ------------
