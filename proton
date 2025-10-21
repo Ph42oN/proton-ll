@@ -1617,9 +1617,6 @@ class Session:
         self.env.setdefault("VKD3D_DEBUG", "none")
         self.env.setdefault("VKD3D_SHADER_DEBUG", "none")
 
-        #disable XIM support until libx11 >= 1.7 is widespread
-        self.env.setdefault("WINE_ALLOW_XIM", "0")
-
         if "wined3d11" in self.compat_config:
             self.compat_config.add("wined3d")
 
@@ -1648,9 +1645,6 @@ class Session:
             self.env.pop("WINEESYNC", "")
         else:
             self.env["WINEESYNC"] = "1"
-
-        if "noxim" not in self.compat_config:
-            self.env.pop("WINE_ALLOW_XIM")
 
         if "nofsync" in self.compat_config:
             self.env.pop("WINEFSYNC", "")
