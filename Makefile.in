@@ -97,6 +97,7 @@ else
 	TOOLCHAIN_PREFIX := llvm-
 	OBJCOPY_FLAGS  :=
 	i386_SANITY_FLAGS := -mstack-alignment=4
+	WITHOUT_NVIDIA_LIBS := 1
 endif
 
 OBJCOPY := $(TOOLCHAIN_PREFIX)objcopy
