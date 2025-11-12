@@ -1,0 +1,117 @@
+---
+ src/d3d11/d3d11_options.cpp   | 2 +-
+ src/d3d11/d3d11_swapchain.cpp | 3 ++-
+ src/d3d9/d3d9_options.cpp     | 4 ++--
+ src/d3d9/d3d9_swapchain.cpp   | 1 +
+ src/dxgi/dxgi_options.cpp     | 2 +-
+ src/dxvk/dxvk_options.cpp     | 7 ++++---
+ src/dxvk/dxvk_options.h       | 2 ++
+ 7 files changed, 14 insertions(+), 9 deletions(-)
+
+diff --git a/src/d3d11/d3d11_options.cpp b/src/d3d11/d3d11_options.cpp
+index adf426d..060229c 100644
+--- a/src/d3d11/d3d11_options.cpp
++++ b/src/d3d11/d3d11_options.cpp
+@@ -25,7 +25,7 @@ namespace dxvk {
+     this->disableMsaa           = config.getOption<bool>("d3d11.disableMsaa", false);
+     this->enableContextLock     = config.getOption<bool>("d3d11.enableContextLock", false);
+     this->deferSurfaceCreation  = config.getOption<bool>("dxgi.deferSurfaceCreation", false);
+-    this->maxFrameLatency       = config.getOption<int32_t>("dxgi.maxFrameLatency", 0);
++    this->maxFrameLatency       = config.getOption<int32_t>("dxgi.maxFrameLatency", 1);
+     this->exposeDriverCommandLists = config.getOption<bool>("d3d11.exposeDriverCommandLists", true);
+     this->reproducibleCommandStream = config.getOption<bool>("d3d11.reproducibleCommandStream", false);
+     this->disableDirectImageMapping = config.getOption<bool>("d3d11.disableDirectImageMapping", false);
+diff --git a/src/d3d11/d3d11_swapchain.cpp b/src/d3d11/d3d11_swapchain.cpp
+index 0b963ae..57f4af1 100644
+--- a/src/d3d11/d3d11_swapchain.cpp
++++ b/src/d3d11/d3d11_swapchain.cpp
+@@ -530,7 +530,8 @@ namespace dxvk {
+ 
+     bool sequential = m_desc.SwapEffect == DXGI_SWAP_EFFECT_SEQUENTIAL ||
+                       m_desc.SwapEffect == DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+-    uint32_t backBufferCount = sequential ? m_desc.BufferCount : 1u;
++    //override to dxvk.numBackBuffers
++    uint32_t backBufferCount = m_device->config().numBackBuffers; //sequential ? m_desc.BufferCount : 1u;
+ 
+     // Create new back buffer
+     D3D11_COMMON_TEXTURE_DESC desc;
+diff --git a/src/d3d9/d3d9_options.cpp b/src/d3d9/d3d9_options.cpp
+index a0fffad..e0f7173 100644
+--- a/src/d3d9/d3d9_options.cpp
++++ b/src/d3d9/d3d9_options.cpp
+@@ -41,9 +41,9 @@ namespace dxvk {
+     this->hideNvkGpu                    = config.getOption<Tristate>    ("d3d9.hideNvkGpu",                    Tristate::Auto) == Tristate::True;
+     this->hideAmdGpu                    = config.getOption<Tristate>    ("d3d9.hideAmdGpu",                    Tristate::Auto) == Tristate::True;
+     this->hideIntelGpu                  = config.getOption<Tristate>    ("d3d9.hideIntelGpu",                  Tristate::True) == Tristate::True;
+-    this->maxFrameLatency               = config.getOption<int32_t>     ("d3d9.maxFrameLatency",               0);
++    this->maxFrameLatency               = config.getOption<int32_t>     ("d3d9.maxFrameLatency",               1);
+     this->maxFrameRate                  = config.getOption<int32_t>     ("d3d9.maxFrameRate",                  0);
+-    this->presentInterval               = config.getOption<int32_t>     ("d3d9.presentInterval",               -1);
++    this->presentInterval               = config.getOption<int32_t>     ("d3d9.presentInterval",               0);
+     this->shaderModel                   = config.getOption<int32_t>     ("d3d9.shaderModel",                   3u);
+     this->dpiAware                      = config.getOption<bool>        ("d3d9.dpiAware",                      true);
+     this->strictConstantCopies          = config.getOption<bool>        ("d3d9.strictConstantCopies",          false);
+diff --git a/src/d3d9/d3d9_swapchain.cpp b/src/d3d9/d3d9_swapchain.cpp
+index 1daaaa6..09e5de5 100644
+--- a/src/d3d9/d3d9_swapchain.cpp
++++ b/src/d3d9/d3d9_swapchain.cpp
+@@ -25,6 +25,7 @@ namespace dxvk {
+     , m_swapchainExt     (this) {
+     this->NormalizePresentParameters(pPresentParams);
+     m_presentParams = *pPresentParams;
++    m_presentParams.BackBufferCount = m_device->config().numBackBuffers; 
+     m_window = m_presentParams.hDeviceWindow;
+ 
+     UpdateWindowCtx();
+diff --git a/src/dxgi/dxgi_options.cpp b/src/dxgi/dxgi_options.cpp
+index 333cb4f..6ff6896 100644
+--- a/src/dxgi/dxgi_options.cpp
++++ b/src/dxgi/dxgi_options.cpp
+@@ -91,7 +91,7 @@ namespace dxvk {
+     this->maxSharedMemory = VkDeviceSize(config.getOption<int32_t>("dxgi.maxSharedMemory", 0)) << 20;
+ 
+     this->maxFrameRate     = config.getOption<int32_t>("dxgi.maxFrameRate", 0);
+-    this->syncInterval     = config.getOption<int32_t>("dxgi.syncInterval", -1);
++    this->syncInterval     = config.getOption<int32_t>("dxgi.syncInterval", 0);
+     this->forceRefreshRate = config.getOption<int32_t>("dxgi.forceRefreshRate", 0u);
+ 
+     // We don't support dcomp swapchains and some games may rely on them failing on creation
+diff --git a/src/dxvk/dxvk_options.cpp b/src/dxvk/dxvk_options.cpp
+index 8c18f3b..203b4cd 100644
+--- a/src/dxvk/dxvk_options.cpp
++++ b/src/dxvk/dxvk_options.cpp
+@@ -6,14 +6,15 @@ namespace dxvk {
+     enableDebugUtils      = config.getOption<bool>    ("dxvk.enableDebugUtils",       false);
+     enableMemoryDefrag    = config.getOption<Tristate>("dxvk.enableMemoryDefrag",     Tristate::Auto);
+     numCompilerThreads    = config.getOption<int32_t> ("dxvk.numCompilerThreads",     0);
++    numBackBuffers        = config.getOption<int32_t> ("dxvk.numBackBuffers",                          1); 
+     enableGraphicsPipelineLibrary = config.getOption<Tristate>("dxvk.enableGraphicsPipelineLibrary", Tristate::Auto);
+     enableDescriptorBuffer = config.getOption<Tristate>("dxvk.enableDescriptorBuffer", Tristate::Auto);
+     trackPipelineLifetime = config.getOption<Tristate>("dxvk.trackPipelineLifetime",  Tristate::Auto);
+     useRawSsbo            = config.getOption<Tristate>("dxvk.useRawSsbo",             Tristate::Auto);
+     hud                   = config.getOption<std::string>("dxvk.hud", "");
+-    tearFree              = config.getOption<Tristate>("dxvk.tearFree",               Tristate::Auto);
+-    latencySleep          = config.getOption<Tristate>("dxvk.latencySleep",           Tristate::Auto);
+-    latencyTolerance      = config.getOption<int32_t> ("dxvk.latencyTolerance",       1000);
++    tearFree              = config.getOption<Tristate>("dxvk.tearFree",               Tristate::False);
++    latencySleep          = config.getOption<Tristate>("dxvk.latencySleep",           Tristate::True);
++    latencyTolerance      = config.getOption<int32_t> ("dxvk.latencyTolerance",       0);
+     disableNvLowLatency2  = config.getOption<Tristate>("dxvk.disableNvLowLatency2",   Tristate::Auto);
+     hideIntegratedGraphics = config.getOption<bool>   ("dxvk.hideIntegratedGraphics", false);
+     zeroMappedMemory      = config.getOption<bool>    ("dxvk.zeroMappedMemory",       false);
+diff --git a/src/dxvk/dxvk_options.h b/src/dxvk/dxvk_options.h
+index 380f5ec..dd647bd 100644
+--- a/src/dxvk/dxvk_options.h
++++ b/src/dxvk/dxvk_options.h
+@@ -20,6 +20,8 @@ namespace dxvk {
+     /// when using the state cache
+     int32_t numCompilerThreads = 0;
+ 
++    int32_t numBackBuffers = 0; 
++
+     /// Enable graphics pipeline library
+     Tristate enableGraphicsPipelineLibrary = Tristate::Auto;
+ 
+-- 
+2.51.0
+

@@ -8,12 +8,18 @@ patch_cmd() {
 
 here="$(dirname "$(realpath "$0")")"
 
-pushd "$here"/../glslang || exit 1
-    patch_cmd "$here"/glslang/glslang-renderdoc-1.36-gcc15-fix.patch
+#pushd "$here"/../glslang || exit 1
+#    patch_cmd "$here"/glslang/glslang-renderdoc-1.36-gcc15-fix.patch
+#popd || exit 1
+
+pushd "$here"/../dxvk || exit 1
+    patch_cmd "$here"/dxvk/dxvk-gplasync-master.patch
+    patch_cmd "$here"/dxvk/global-dxvk.conf.patch
+    patch_cmd "$here"/dxvk/low-latency.patch
 popd || exit 1
 
-pushd "$here"/../dxvk-gplasync || exit 1
-    patch_cmd "$here"/gplasync/dxvk-gplasync-2.7-1.patch
+pushd "$here"/../vkd3d-proton || exit 1
+    patch_cmd "$here"/vkd3d/low-latency.patch
 popd || exit 1
 
 pushd "$here"/../wine || exit 1
