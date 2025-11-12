@@ -8,9 +8,9 @@ patch_cmd() {
 
 here="$(dirname "$(realpath "$0")")"
 
-#pushd "$here"/../glslang || exit 1
-#    patch_cmd "$here"/glslang/glslang-renderdoc-1.36-gcc15-fix.patch
-#popd || exit 1
+pushd "$here"/../glslang || exit 1
+    patch_cmd "$here"/glslang/glslang-renderdoc-1.36-gcc15-fix.patch
+popd || exit 1
 
 pushd "$here"/../dxvk || exit 1
     patch_cmd "$here"/dxvk/dxvk-gplasync-master.patch
