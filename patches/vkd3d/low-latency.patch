@@ -1,14 +1,9 @@
-From c0ec399e5667ac14640ecaa333ce532c25ad9a3d Mon Sep 17 00:00:00 2001
-From: Ph42oN <julle.ys.57@gmail.com>
-Date: Mon, 10 Nov 2025 16:39:13 +0200
-Subject: [PATCH] vkd3d-ll
-
 ---
- libs/vkd3d/swapchain.c | 4 ++--
- 1 file changed, 2 insertions(+), 2 deletions(-)
+ libs/vkd3d/swapchain.c | 12 ++++++++----
+ 1 file changed, 8 insertions(+), 4 deletions(-)
 
 diff --git a/libs/vkd3d/swapchain.c b/libs/vkd3d/swapchain.c
-index 77a83099..1592af2a 100644
+index 77a83099..c11c7379 100644
 --- a/libs/vkd3d/swapchain.c
 +++ b/libs/vkd3d/swapchain.c
 @@ -1378,7 +1378,7 @@ static HRESULT dxgi_vk_swap_chain_init_sync_objects(struct dxgi_vk_swap_chain *c
@@ -20,15 +15,23 @@ index 77a83099..1592af2a 100644
          /* 3 frames is the default in the API, so that's what we should report to application if asks. */
          chain->frame_latency = DEFAULT_FRAME_LATENCY;
      }
-@@ -1914,7 +1914,7 @@ static void dxgi_vk_swap_chain_recreate_swapchain_in_present_task(struct dxgi_vk
+@@ -1914,9 +1914,13 @@ static void dxgi_vk_swap_chain_recreate_swapchain_in_present_task(struct dxgi_vk
      if (strlen(count_env) > 0)
      {
          override_image_count = strtoul(count_env, NULL, 0);
 -        swapchain_create_info.minImageCount = max(surface_caps.minImageCount, override_image_count);
+-        INFO("Overriding swapchain images to %u.\n", swapchain_create_info.minImageCount);
+-    }
 +        swapchain_create_info.minImageCount = override_image_count; //max(surface_caps.minImageCount, override_image_count);
-         INFO("Overriding swapchain images to %u.\n", swapchain_create_info.minImageCount);
-     }
++    }
++    else
++    {
++        swapchain_create_info.minImageCount = 2;
++    }
++    INFO("Overriding swapchain images to %u.\n", swapchain_create_info.minImageCount);
  
+     if (surface_caps.maxImageCount && swapchain_create_info.minImageCount > surface_caps.maxImageCount)
+         swapchain_create_info.minImageCount = surface_caps.maxImageCount;
 -- 
 2.51.0
 
