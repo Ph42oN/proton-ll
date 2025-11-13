@@ -106,8 +106,8 @@ jobs:
           gh
           --repo "${{ github.server_url }}/${{ github.repository }}"
           release upload
-          ${{ inputs.version }}
-          ${{ matrix.file }}
+          ${{ github.ref_name }}
+          proton-ll-*
           --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
