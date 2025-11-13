@@ -1,19 +1,28 @@
-# dwproton
+# proton-lowlatency
 
-Dawn Winery's custom Proton fork with fixes for various games :xdd:
+[dwproton](https://dawn.wine/dawn-winery/dwproton) with extra patches to improve input latency
 
 Features:
-- Based on [Proton-CachyOS](https://github.com/CachyOS/proton-cachyos)
+- DXVK with gplasync, and extra tuning for low latency:<br />
+  Restore numBackBuffers option as dxvk.numBackBuffers = 1<br />
+  dxgi.maxFrameLatency = 1<br />
+  d3d9.maxFrameLatency = 1<br />
+  dxgi.syncInterval = 0<br />
+  d3d9.presentInterval = 0<br />
+  dxvk.tearFree = False<br />
+  dxvk.latencySleep = True<br />
+  dxvk.latencyTolerance = 0<br />
+  These tweaks should be the optimal for low input lag, but may cause lower fps. If performance loss is too big i recommend trying to set latencyTolerance to 1000, numBackBuffers and/or maxFrameLatency to 2
+- VKD3D-proton tuned for low latency:<br />
+  VKD3D_SWAPCHAIN_LATENCY_FRAMES set to 1 by default<br />
+  VKD3D_SWAPCHAIN_IMAGES set to 2 by default, setting it to 1 may improve latency more, but that causes issues in lot of games.<br />
+  You can try increasing these 2 values if performance loss is too big.
 - Includes latest fixes for games by the Dawn Winery team :pog:
-- Many QoL additions, including [dxvk-gplasync](https://gitlab.com/Ph42oN/dxvk-gplasync)
 - Includes fixes for high CPU usage in HoYo games
 - Breaks Marvel Rivals 🚀
 
-<img width="451" height="561" alt="image" src="https://github.com/user-attachments/assets/cbdc69f9-8d23-45b6-814a-63b75026c30c" />
-
 New environmental variables
 ------------
-- `PROTON_DXVK_GPLASYNC=1`: enables dvxk-gplasync
 - `PROTON_NO_NTSYNC=1`: disables NTsync, fallbacks to fsync
 - `PROTON_DISABLE_AEDEBUG=1`: disables AeDebug, fixes issues with specific games
 - `WINE_USE_TAKE_FOCUS=1`: enables a fix for games dropping inputs after alt-tab
