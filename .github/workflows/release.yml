@@ -43,7 +43,8 @@ jobs:
       - name: Configure
         working-directory: ./build
         env:
-          RUSTFLAGS: -Copt-level=3 -Ctarget-cpu=nocona
+          CFLAGS: -O3 -march=x86-64-v4 -mtune=generic
+          RUSTFLAGS: -Copt-level=3 -Ctarget-cpu=x86-64-v4
           USE_LTO: 0
         run: |
           ../configure.sh --build-name=proton-ll-${{ github.ref_name }}-x86_64 --without-tts --enable-ccache
