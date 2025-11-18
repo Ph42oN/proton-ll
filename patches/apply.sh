@@ -13,9 +13,9 @@ pushd "$here"/../glslang || exit 1
 popd || exit 1
 
 pushd "$here"/../dxvk || exit 1
+	patch_cmd "$here"/dxvk/low-latency.patch
     patch_cmd "$here"/dxvk/dxvk-gplasync-master.patch
     patch_cmd "$here"/dxvk/global-dxvk.conf.patch
-    patch_cmd "$here"/dxvk/low-latency.patch
 popd || exit 1
 
 pushd "$here"/../vkd3d-proton || exit 1
