@@ -6,9 +6,9 @@ Features:
 - DXVK with gplasync, netborg-afps low latency framepacing and extra tuning for low latency.<br />
   More info about dxvk used here: [https://gitlab.com/Ph42oN/dxvk-ll](https://gitlab.com/Ph42oN/dxvk-ll)
 - VKD3D-proton tuned for low latency:<br />
-  VKD3D_SWAPCHAIN_LATENCY_FRAMES set to 1 by default<br />
-  VKD3D_SWAPCHAIN_IMAGES set to 2 by default, setting it to 1 may improve latency more, but that causes issues in lot of games.<br />
-  You can try increasing these 2 values if performance loss is too big.
+  Allow VKD3D_SWAPCHAIN_LATENCY_FRAMES to be set to 0, set to 1 by default<br />
+  Allow VKD3D_SWAPCHAIN_IMAGES to be set lower, default to 2. Setting it to 1 may improve latency more, but that causes issues in lot of games.<br />
+  Lower values on these VKD3D variables can give lower latency, higher values may improve performance.
 - Includes latest fixes for games by the Dawn Winery team :pog:
 - Includes fixes for high CPU usage in HoYo games
 - Breaks Marvel Rivals 🚀
