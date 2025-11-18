@@ -1,18 +1,19 @@
 ---
- src/d3d11/d3d11_options.cpp   | 2 +-
- src/d3d11/d3d11_swapchain.cpp | 3 ++-
- src/d3d9/d3d9_options.cpp     | 4 ++--
- src/d3d9/d3d9_swapchain.cpp   | 1 +
- src/dxgi/dxgi_options.cpp     | 2 +-
- src/dxvk/dxvk_options.cpp     | 7 ++++---
- src/dxvk/dxvk_options.h       | 2 ++
- 7 files changed, 14 insertions(+), 9 deletions(-)
+ src/d3d11/d3d11_options.cpp    | 2 +-
+ src/d3d11/d3d11_swapchain.cpp  | 8 +++++---
+ src/d3d9/d3d9_options.cpp      | 4 ++--
+ src/d3d9/d3d9_swapchain.cpp    | 6 ++++--
+ src/dxgi/dxgi_options.cpp      | 2 +-
+ src/dxvk/dxvk_options.cpp      | 5 +++--
+ src/dxvk/dxvk_options.h        | 2 ++
+ src/dxvk/hud/dxvk_hud_item.cpp | 2 +-
+ 8 files changed, 19 insertions(+), 12 deletions(-)
 
 diff --git a/src/d3d11/d3d11_options.cpp b/src/d3d11/d3d11_options.cpp
-index adf426d..060229c 100644
+index 575750b2..778b6ff5 100644
 --- a/src/d3d11/d3d11_options.cpp
 +++ b/src/d3d11/d3d11_options.cpp
-@@ -25,7 +25,7 @@ namespace dxvk {
+@@ -27,7 +27,7 @@ namespace dxvk {
      this->disableMsaa           = config.getOption<bool>("d3d11.disableMsaa", false);
      this->enableContextLock     = config.getOption<bool>("d3d11.enableContextLock", false);
      this->deferSurfaceCreation  = config.getOption<bool>("dxgi.deferSurfaceCreation", false);
@@ -22,10 +23,10 @@ index adf426d..060229c 100644
      this->reproducibleCommandStream = config.getOption<bool>("d3d11.reproducibleCommandStream", false);
      this->disableDirectImageMapping = config.getOption<bool>("d3d11.disableDirectImageMapping", false);
 diff --git a/src/d3d11/d3d11_swapchain.cpp b/src/d3d11/d3d11_swapchain.cpp
-index 0b963ae..57f4af1 100644
+index 67cad757..0548fb95 100644
 --- a/src/d3d11/d3d11_swapchain.cpp
 +++ b/src/d3d11/d3d11_swapchain.cpp
-@@ -530,7 +530,8 @@ namespace dxvk {
+@@ -542,7 +542,8 @@ namespace dxvk {
  
      bool sequential = m_desc.SwapEffect == DXGI_SWAP_EFFECT_SEQUENTIAL ||
                        m_desc.SwapEffect == DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
@@ -35,8 +36,27 @@ index 0b963ae..57f4af1 100644
  
      // Create new back buffer
      D3D11_COMMON_TEXTURE_DESC desc;
+@@ -664,7 +665,7 @@ namespace dxvk {
+     // DXGI does not seem to implicitly synchronize waitable swap chains,
+     // so in that case we should just respect the user config. For regular
+     // swap chains, pick the latency from the DXGI device.
+-    uint32_t maxFrameLatency = DXGI_MAX_SWAP_CHAIN_BUFFERS;
++    /*uint32_t maxFrameLatency = DXGI_MAX_SWAP_CHAIN_BUFFERS;
+ 
+     if (!(m_desc.Flags & DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT))
+       m_dxgiDevice->GetMaximumFrameLatency(&maxFrameLatency);
+@@ -673,7 +674,8 @@ namespace dxvk {
+       maxFrameLatency = std::min(maxFrameLatency, m_frameLatencyCap);
+ 
+     maxFrameLatency = std::min(maxFrameLatency, m_desc.BufferCount);
+-    return maxFrameLatency;
++    */
++    return m_frameLatencyCap; //maxFrameLatency;
+   }
+ 
+ 
 diff --git a/src/d3d9/d3d9_options.cpp b/src/d3d9/d3d9_options.cpp
-index a0fffad..e0f7173 100644
+index 8cdcabe1..92942a55 100644
 --- a/src/d3d9/d3d9_options.cpp
 +++ b/src/d3d9/d3d9_options.cpp
 @@ -41,9 +41,9 @@ namespace dxvk {
@@ -52,10 +72,10 @@ index a0fffad..e0f7173 100644
      this->dpiAware                      = config.getOption<bool>        ("d3d9.dpiAware",                      true);
      this->strictConstantCopies          = config.getOption<bool>        ("d3d9.strictConstantCopies",          false);
 diff --git a/src/d3d9/d3d9_swapchain.cpp b/src/d3d9/d3d9_swapchain.cpp
-index 1daaaa6..09e5de5 100644
+index dfd29f07..c2243445 100644
 --- a/src/d3d9/d3d9_swapchain.cpp
 +++ b/src/d3d9/d3d9_swapchain.cpp
-@@ -25,6 +25,7 @@ namespace dxvk {
+@@ -27,6 +27,7 @@ namespace dxvk {
      , m_swapchainExt     (this) {
      this->NormalizePresentParameters(pPresentParams);
      m_presentParams = *pPresentParams;
@@ -63,8 +83,25 @@ index 1daaaa6..09e5de5 100644
      m_window = m_presentParams.hDeviceWindow;
  
      UpdateWindowCtx();
+@@ -1160,13 +1161,14 @@ namespace dxvk {
+   }
+ 
+   uint32_t D3D9SwapChainEx::GetActualFrameLatency() {
+-    uint32_t maxFrameLatency = m_parent->GetFrameLatency();
++    /*uint32_t maxFrameLatency = m_parent->GetFrameLatency();
+ 
+     if (m_frameLatencyCap)
+       maxFrameLatency = std::min(maxFrameLatency, m_frameLatencyCap);
+ 
+     maxFrameLatency = std::min(maxFrameLatency, m_presentParams.BackBufferCount + 1);
+-    return maxFrameLatency;
++    */
++    return m_frameLatencyCap; //maxFrameLatency;
+   }
+ 
+ 
 diff --git a/src/dxgi/dxgi_options.cpp b/src/dxgi/dxgi_options.cpp
-index 333cb4f..6ff6896 100644
+index 333cb4f7..6ff68962 100644
 --- a/src/dxgi/dxgi_options.cpp
 +++ b/src/dxgi/dxgi_options.cpp
 @@ -91,7 +91,7 @@ namespace dxvk {
@@ -77,30 +114,29 @@ index 333cb4f..6ff6896 100644
  
      // We don't support dcomp swapchains and some games may rely on them failing on creation
 diff --git a/src/dxvk/dxvk_options.cpp b/src/dxvk/dxvk_options.cpp
-index 8c18f3b..203b4cd 100644
+index cc02723e..6daf95e2 100644
 --- a/src/dxvk/dxvk_options.cpp
 +++ b/src/dxvk/dxvk_options.cpp
 @@ -6,14 +6,15 @@ namespace dxvk {
      enableDebugUtils      = config.getOption<bool>    ("dxvk.enableDebugUtils",       false);
      enableMemoryDefrag    = config.getOption<Tristate>("dxvk.enableMemoryDefrag",     Tristate::Auto);
      numCompilerThreads    = config.getOption<int32_t> ("dxvk.numCompilerThreads",     0);
-+    numBackBuffers        = config.getOption<int32_t> ("dxvk.numBackBuffers",                          1); 
++    numBackBuffers        = config.getOption<int32_t> ("dxvk.numBackBuffers",         1); 
      enableGraphicsPipelineLibrary = config.getOption<Tristate>("dxvk.enableGraphicsPipelineLibrary", Tristate::Auto);
      enableDescriptorBuffer = config.getOption<Tristate>("dxvk.enableDescriptorBuffer", Tristate::Auto);
      trackPipelineLifetime = config.getOption<Tristate>("dxvk.trackPipelineLifetime",  Tristate::Auto);
      useRawSsbo            = config.getOption<Tristate>("dxvk.useRawSsbo",             Tristate::Auto);
      hud                   = config.getOption<std::string>("dxvk.hud", "");
 -    tearFree              = config.getOption<Tristate>("dxvk.tearFree",               Tristate::Auto);
--    latencySleep          = config.getOption<Tristate>("dxvk.latencySleep",           Tristate::Auto);
--    latencyTolerance      = config.getOption<int32_t> ("dxvk.latencyTolerance",       1000);
 +    tearFree              = config.getOption<Tristate>("dxvk.tearFree",               Tristate::False);
-+    latencySleep          = config.getOption<Tristate>("dxvk.latencySleep",           Tristate::True);
+     latencySleep          = config.getOption<Tristate>("dxvk.latencySleep",           Tristate::False);
+-    latencyTolerance      = config.getOption<int32_t> ("dxvk.latencyTolerance",       1000);
 +    latencyTolerance      = config.getOption<int32_t> ("dxvk.latencyTolerance",       0);
      disableNvLowLatency2  = config.getOption<Tristate>("dxvk.disableNvLowLatency2",   Tristate::Auto);
      hideIntegratedGraphics = config.getOption<bool>   ("dxvk.hideIntegratedGraphics", false);
      zeroMappedMemory      = config.getOption<bool>    ("dxvk.zeroMappedMemory",       false);
 diff --git a/src/dxvk/dxvk_options.h b/src/dxvk/dxvk_options.h
-index 380f5ec..dd647bd 100644
+index 0702f0ae..525c9f9b 100644
 --- a/src/dxvk/dxvk_options.h
 +++ b/src/dxvk/dxvk_options.h
 @@ -20,6 +20,8 @@ namespace dxvk {
@@ -112,6 +148,19 @@ index 380f5ec..dd647bd 100644
      /// Enable graphics pipeline library
      Tristate enableGraphicsPipelineLibrary = Tristate::Auto;
  
+diff --git a/src/dxvk/hud/dxvk_hud_item.cpp b/src/dxvk/hud/dxvk_hud_item.cpp
+index 902ac95e..6fbd87a7 100644
+--- a/src/dxvk/hud/dxvk_hud_item.cpp
++++ b/src/dxvk/hud/dxvk_hud_item.cpp
+@@ -104,7 +104,7 @@ namespace dxvk::hud {
+           HudRenderer&        renderer,
+           HudPos              position) {
+     position.y += 16;
+-    renderer.drawText(16, position, 0xffffffffu, "DXVK-LOW-LATENCY " DXVK_VERSION);
++    renderer.drawText(16, position, 0xffffffffu, "DXVK-LL-GPLASYNC " DXVK_VERSION);
+ 
+     position.y += 8;
+     return position;
 -- 
 2.51.0
 
