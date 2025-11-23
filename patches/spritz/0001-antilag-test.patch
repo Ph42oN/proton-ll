@@ -1,0 +1,116 @@
+From c3164869ffac06c7d36817cc726e999c3048f7ff Mon Sep 17 00:00:00 2001
+From: Ph42oN <julle.ys.57@gmail.com>
+Date: Sun, 23 Nov 2025 17:02:51 +0200
+Subject: [PATCH] antilag test
+
+---
+ dlls/dinput/device.c             |  5 ++++-
+ dlls/winevulkan/vulkan.c         | 33 ++++++++++++++++++++++++++++++--
+ dlls/winevulkan/vulkan_private.h |  5 +++++
+ 3 files changed, 40 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/dinput/device.c b/dlls/dinput/device.c
+index 4166d18..22cf443 100644
+--- a/dlls/dinput/device.c
++++ b/dlls/dinput/device.c
+@@ -1504,7 +1504,8 @@ static HRESULT WINAPI dinput_device_GetDeviceState( IDirectInputDevice8W *iface,
+ static HRESULT WINAPI dinput_device_GetDeviceData( IDirectInputDevice8W *iface, DWORD size, DIDEVICEOBJECTDATA *data,
+                                                    DWORD *count, DWORD flags )
+ {
+-    struct dinput_device *This = impl_from_IDirectInputDevice8W( iface );
++	struct dinput_device *This = impl_from_IDirectInputDevice8W(iface);
++	//const struct vulkan_funcs *vulkan_funcs = get_vulkan_driver(WINE_VULKAN_DRIVER_VERSION);
+     HRESULT ret = DI_OK;
+     int len;
+ 
+@@ -1521,6 +1522,8 @@ static HRESULT WINAPI dinput_device_GetDeviceData( IDirectInputDevice8W *iface,
+         return DI_OK;
+     if (size < sizeof(DIDEVICEOBJECTDATA_DX3)) return DIERR_INVALIDPARAM;
+ 
++	wine_antiLagUpdate(VK_ANTI_LAG_STAGE_INPUT_AMD);
++
+     IDirectInputDevice2_Poll(iface);
+     EnterCriticalSection(&This->crit);
+ 
+diff --git a/dlls/winevulkan/vulkan.c b/dlls/winevulkan/vulkan.c
+index 61741ca..141be13 100644
+--- a/dlls/winevulkan/vulkan.c
++++ b/dlls/winevulkan/vulkan.c
+@@ -51,6 +51,8 @@ WINE_DEFAULT_DEBUG_CHANNEL(vulkan);
+ 
+ static int debug_level;
+ 
++static struct wine_antilag antilag;
++
+ static PFN_vkCreateInstance p_vkCreateInstance;
+ static PFN_vkEnumerateInstanceVersion p_vkEnumerateInstanceVersion;
+ static PFN_vkEnumerateInstanceExtensionProperties p_vkEnumerateInstanceExtensionProperties;
+@@ -503,7 +505,9 @@ static VkResult wine_vk_physical_device_init(struct wine_phys_dev *object, VkPhy
+         else if (!strcmp(host_properties[i].extensionName, "VK_EXT_map_memory_placed"))
+             have_memory_placed = TRUE;
+         else if (!strcmp(host_properties[i].extensionName, "VK_KHR_map_memory2"))
+-            have_map_memory2 = TRUE;
++			have_map_memory2 = TRUE;
++		else if (!strcmp(host_properties[i].extensionName, "VK_AMD_anti_lag"))
++			antilag.enabled = true;
+     }
+ 
+     if (have_external_memory_fd && have_external_semaphore_fd)
+@@ -1242,7 +1246,9 @@ VkResult wine_vkCreateDevice(VkPhysicalDevice client_physical_device, const VkDe
+         struct vulkan_queue *queue = device->queues + i;
+         vulkan_instance_insert_object(instance, &queue->obj);
+     }
+-    vulkan_instance_insert_object(instance, &device->obj);
++	vulkan_instance_insert_object(instance, &device->obj);
++
++	if (antilag.enabled) antilag.device = client_device;
+ 
+     *ret = client_device;
+     return VK_SUCCESS;
+@@ -4824,3 +4830,26 @@ DECLSPEC_EXPORT VkPhysicalDevice __wine_get_wrapped_VkPhysicalDevice(VkInstance
+     ERR("Unknown native physical device: %p, instance %p, handle %p\n", native_phys_dev, instance, handle);
+     return NULL;
+ }
++
++void wine_antiLagUpdate(VkAntiLagStageAMD stage) {
++    struct vulkan_device *vkdev = vulkan_device_from_handle(antilag.device);
++	
++	if (antilag.enabled) {
++	    /*VkAntiLagPresentationInfoAMD  presentationInfo = {
++		    VK_STRUCTURE_TYPE_ANTI_LAG_PRESENTATION_INFO_AMD, // sType
++		    NULL,                                             // pNext
++		    stage,                                            // stage
++		    chain->present.current_backbuffer_index,          // frameIndex
++	    };*/
++
++		const VkAntiLagDataAMD data = {
++			VK_STRUCTURE_TYPE_ANTI_LAG_DATA_AMD,	// sType
++			NULL,									// pNext
++			VK_ANTI_LAG_MODE_ON_AMD,				// mode
++			100, //chain->frame_rate_limit.fps,            // maxFPS
++			NULL, //&presentationInfo,						// pPresentationInfo
++		};
++		TRACE("AntiLag update called"); //stage %d frame %d\n", stage, presentationInfo.frameIndex);
++        vkdev->p_vkAntiLagUpdateAMD(antilag.device, &data);
++    }
++}
+\ No newline at end of file
+diff --git a/dlls/winevulkan/vulkan_private.h b/dlls/winevulkan/vulkan_private.h
+index a63eef5..8ab2c3d 100644
+--- a/dlls/winevulkan/vulkan_private.h
++++ b/dlls/winevulkan/vulkan_private.h
+@@ -30,6 +30,11 @@
+ 
+ extern const struct vulkan_funcs *vk_funcs;
+ 
++struct wine_antilag {
++	bool enabled = false;
++	VkDevice *device;
++}
++
+ struct wine_cmd_buffer
+ {
+     VULKAN_OBJECT_HEADER( VkCommandBuffer, command_buffer );
+-- 
+2.51.0
+
