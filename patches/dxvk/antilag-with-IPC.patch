@@ -1,0 +1,319 @@
+From 5b310e050432c13fa21bc86ee083282d256e404e Mon Sep 17 00:00:00 2001
+From: Ph42oN <julle.ys.57@gmail.com>
+Date: Wed, 26 Nov 2025 01:51:22 +0200
+Subject: [PATCH] antilag with IPC
+
+---
+ src/dxvk/dxvk_adapter.cpp               |   7 ++
+ src/dxvk/dxvk_options.cpp               |   3 +-
+ src/dxvk/dxvk_options.h                 |   1 +
+ src/dxvk/dxvk_presenter.cpp             | 104 +++++++++++++++++++++++-
+ src/dxvk/dxvk_presenter.h               |   6 ++
+ src/dxvk/framepacer/dxvk_framepacer.cpp |   2 +-
+ src/dxvk/hud/dxvk_hud_item.cpp          |   2 +-
+ src/util/util_fps_limiter.cpp           |   1 +
+ src/util/util_fps_limiter.h             |   2 +
+ src/vulkan/vulkan_loader.h              |   4 +
+ 10 files changed, 127 insertions(+), 5 deletions(-)
+
+diff --git a/src/dxvk/dxvk_adapter.cpp b/src/dxvk/dxvk_adapter.cpp
+index d8907653..ffa68d4d 100644
+--- a/src/dxvk/dxvk_adapter.cpp
++++ b/src/dxvk/dxvk_adapter.cpp
+@@ -221,6 +221,13 @@ namespace dxvk {
+     deviceInfo.ppEnabledExtensionNames = extensionNames.data();
+     deviceInfo.pEnabledFeatures = &features->features;
+ 
++    VkPhysicalDeviceAntiLagFeaturesAMD antiLag {
++		  VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ANTI_LAG_FEATURES_AMD,
++		  features->pNext,
++      true
++    };
++    deviceInfo.pNext = &antiLag;
++
+     VkDevice device = VK_NULL_HANDLE;
+     VkResult vr = vk->vkCreateDevice(m_handle, &deviceInfo, nullptr, &device);
+ 
+diff --git a/src/dxvk/dxvk_options.cpp b/src/dxvk/dxvk_options.cpp
+index 6daf95e2..1d30a4a0 100644
+--- a/src/dxvk/dxvk_options.cpp
++++ b/src/dxvk/dxvk_options.cpp
+@@ -6,7 +6,8 @@ namespace dxvk {
+     enableDebugUtils      = config.getOption<bool>    ("dxvk.enableDebugUtils",       false);
+     enableMemoryDefrag    = config.getOption<Tristate>("dxvk.enableMemoryDefrag",     Tristate::Auto);
+     numCompilerThreads    = config.getOption<int32_t> ("dxvk.numCompilerThreads",     0);
+-    numBackBuffers        = config.getOption<int32_t> ("dxvk.numBackBuffers",         1); 
++    numBackBuffers        = config.getOption<int32_t> ("dxvk.numBackBuffers",         1);
++    antiLag               = config.getOption<bool>    ("dxvk.antiLag",                   true); 
+     enableGraphicsPipelineLibrary = config.getOption<Tristate>("dxvk.enableGraphicsPipelineLibrary", Tristate::Auto);
+     enableDescriptorBuffer = config.getOption<Tristate>("dxvk.enableDescriptorBuffer", Tristate::Auto);
+     trackPipelineLifetime = config.getOption<Tristate>("dxvk.trackPipelineLifetime",  Tristate::Auto);
+diff --git a/src/dxvk/dxvk_options.h b/src/dxvk/dxvk_options.h
+index 525c9f9b..a764a6eb 100644
+--- a/src/dxvk/dxvk_options.h
++++ b/src/dxvk/dxvk_options.h
+@@ -21,6 +21,7 @@ namespace dxvk {
+     int32_t numCompilerThreads = 0;
+ 
+     int32_t numBackBuffers = 0; 
++    bool antiLag = false;
+ 
+     /// Enable graphics pipeline library
+     Tristate enableGraphicsPipelineLibrary = Tristate::Auto;
+diff --git a/src/dxvk/dxvk_presenter.cpp b/src/dxvk/dxvk_presenter.cpp
+index 7314f2c0..cd608b6e 100644
+--- a/src/dxvk/dxvk_presenter.cpp
++++ b/src/dxvk/dxvk_presenter.cpp
+@@ -1,4 +1,15 @@
+ #include <algorithm>
++#include <chrono>
++#include <ratio>
++#include <stdint.h>
++#include <thread>
++#include <vulkan/vulkan_core.h>
++
++#include <sys/types.h>
++
++#ifdef _WIN32
++#include <windows.h>
++#endif
+ 
+ #include "dxvk_device.h"
+ #include "dxvk_presenter.h"
+@@ -45,10 +56,15 @@ namespace dxvk {
+     // with present operations and periodically signals the event
+     if (m_device->features().khrPresentWait.presentWait && m_signal != nullptr)
+       m_frameThread = dxvk::thread([this] { runFrameThread(); });
++
++    m_antiLag = m_device->config().antiLag;
++    if (m_antiLag)
++      m_alThread = dxvk::thread([this] { antiLagIPC(); });
+   }
+ 
+-  
++
+   Presenter::~Presenter() {
++	  m_antiLag = false;
+     destroySwapchain();
+     destroySurface();
+     destroyLatencySemaphore();
+@@ -61,6 +77,7 @@ namespace dxvk {
+       }
+ 
+       m_frameThread.join();
++      m_alThread.join();
+     }
+   }
+ 
+@@ -74,6 +91,85 @@ namespace dxvk {
+     return VK_SUCCESS;
+   }
+ 
++  void Presenter::antiLagUpdate(VkDevice device, VkAntiLagStageAMD stage) {
++	  static uint32_t lastFrame = 0;
++	  if (m_antiLag && lastFrame != m_frameIndex) {
++	    VkAntiLagPresentationInfoAMD  presentationInfo = {
++		    VK_STRUCTURE_TYPE_ANTI_LAG_PRESENTATION_INFO_AMD, // sType
++		    nullptr,                                          // pNext
++		    stage,                      // stage
++		    m_frameIndex,                                // frameIndex
++	    };
++	  
++	    const VkAntiLagDataAMD data = {
++		    VK_STRUCTURE_TYPE_ANTI_LAG_DATA_AMD, // sType
++		    nullptr,							                // pNext
++		    VK_ANTI_LAG_MODE_ON_AMD,			        // mode
++		    m_fpsLimiter.m_maxFPS,	              // maxFPS
++		    &presentationInfo,			              // pPresentationInfo
++	    };
++      Logger::debug(str::format("AntiLag update stage ", stage, " frame ", m_frameIndex));
++	    m_vkd->vkAntiLagUpdateAMD(device, &data);
++      
++    }
++  }
++
++  void Presenter::antiLagIPC() {
++	  HANDLE hPipe;
++    char out=2, in;
++    DWORD bytes;
++
++    // Create a named pipe
++    hPipe = CreateNamedPipeA(
++        "\\\\.\\pipe\\AntiLag",// pipe name
++        PIPE_ACCESS_DUPLEX,    // write access only
++        PIPE_TYPE_BYTE | PIPE_WAIT, // byte-type pipe, blocking mode
++        1,                     // max instances
++        1024,                  // output buffer size
++        1024,                  // input buffer size
++        0,                     // default timeout (ms)
++        NULL                   // security attributes
++    );
++
++    if (hPipe == INVALID_HANDLE_VALUE) {
++        Logger::warn(str::format("Failed to create named pipe. Error: ", GetLastError()));
++        return;
++    }
++
++    Logger::info("Waiting for client to connect...\n");
++    // Wait for client connection
++    bool connected = ConnectNamedPipe(hPipe, NULL) ? true : (GetLastError() == ERROR_PIPE_CONNECTED);
++
++    if (connected) {
++      Logger::info("Antilag client connected");
++    } else {
++      Logger::warn(str::format("Failed to connect to client. Error: ", GetLastError()));
++    }
++    
++    while(true){
++      if (ReadFile(hPipe, &in, 1, &bytes, NULL)) {
++        if (in == 1) {
++          Logger::debug("AntiLag call requested");
++          //std::this_thread::sleep_for(std::chrono::seconds(1));
++          antiLagUpdate(m_vkd->device(), VK_ANTI_LAG_STAGE_INPUT_AMD);
++          WriteFile(hPipe, &out, 1, &bytes, NULL);
++        }
++      } else {
++        Logger::debug("pipe read error");
++        CloseHandle(hPipe);
++        return;
++      }
++
++      if (!m_antiLag) {
++        Logger::info("Closing antilag IPC");
++        CloseHandle(hPipe);
++        return;
++      }
++	  }
++
++	  // Close the pipe
++    CloseHandle(hPipe);
++  }
+ 
+   VkResult Presenter::acquireNextImage(PresenterSync& sync, Rc<DxvkImage>& image) {
+     std::unique_lock lock(m_surfaceMutex);
+@@ -94,6 +190,8 @@ namespace dxvk {
+ 
+     updateSwapChain();
+ 
++    //antiLagUpdate(m_vkd->device(), VK_ANTI_LAG_STAGE_INPUT_AMD);
++
+     // Don't acquire if we already did so after present
+     if (m_acquireStatus == VK_NOT_READY && m_swapchain) {
+       PresenterSync sync = m_semaphores.at(m_frameIndex);
+@@ -198,6 +296,8 @@ namespace dxvk {
+       fenceInfo.pNext = const_cast<void*>(std::exchange(info.pNext, &fenceInfo));
+     }
+ 
++    antiLagUpdate(m_vkd->device(), VK_ANTI_LAG_STAGE_PRESENT_AMD);
++
+     VkResult status = m_vkd->vkQueuePresentKHR(
+       m_device->queues().graphics.queueHandle, &info);
+ 
+@@ -269,7 +369,7 @@ namespace dxvk {
+       m_lastSignaled = frameId;
+       m_frameCond.notify_one();
+     } else {
+-      m_fpsLimiter.delay(tracker);
++      if (!m_antiLag) m_fpsLimiter.delay(tracker);
+       m_signal->signal(frameId);
+ 
+       if (tracker)
+diff --git a/src/dxvk/dxvk_presenter.h b/src/dxvk/dxvk_presenter.h
+index 2e85d8e1..aee5e3b3 100644
+--- a/src/dxvk/dxvk_presenter.h
++++ b/src/dxvk/dxvk_presenter.h
+@@ -1,5 +1,6 @@
+ #pragma once
+ 
++#include <cstdint>
+ #include <functional>
+ #include <optional>
+ #include <queue>
+@@ -102,6 +103,8 @@ namespace dxvk {
+      */
+     VkResult checkSwapChainStatus();
+ 
++    void antiLagUpdate(VkDevice device, VkAntiLagStageAMD stage);
++    void antiLagIPC();
+     /**
+      * \brief Acquires next image
+      *
+@@ -311,6 +314,9 @@ namespace dxvk {
+     bool                        m_latencySleepModeDirty = false;
+     bool                        m_latencySleepSupported = false;
+ 
++    bool                        m_antiLag = false;
++    dxvk::thread                m_alThread;
++
+     alignas(CACHE_LINE_SIZE)
+     dxvk::mutex                 m_frameMutex;
+     dxvk::condition_variable    m_frameCond;
+diff --git a/src/dxvk/framepacer/dxvk_framepacer.cpp b/src/dxvk/framepacer/dxvk_framepacer.cpp
+index 9bb52cac..59d4db87 100644
+--- a/src/dxvk/framepacer/dxvk_framepacer.cpp
++++ b/src/dxvk/framepacer/dxvk_framepacer.cpp
+@@ -19,7 +19,7 @@ namespace dxvk {
+     // highlighting the generally much better input lag and time consistency.
+     // MAX_FRAME_LATENCY has advantages in some games that provide inconsistent
+     // cpu frametimes and is tuned for highest fps which can be relevant in benchmarks.
+-    FramePacerMode::Mode mode = FramePacerMode::LOW_LATENCY;
++    FramePacerMode::Mode mode = FramePacerMode::MAX_FRAME_LATENCY;
+     int refreshRate = 0;
+ 
+     std::string configStr = env::getEnvVar("DXVK_FRAME_PACE");
+diff --git a/src/dxvk/hud/dxvk_hud_item.cpp b/src/dxvk/hud/dxvk_hud_item.cpp
+index 6fbd87a7..df751c1c 100644
+--- a/src/dxvk/hud/dxvk_hud_item.cpp
++++ b/src/dxvk/hud/dxvk_hud_item.cpp
+@@ -104,7 +104,7 @@ namespace dxvk::hud {
+           HudRenderer&        renderer,
+           HudPos              position) {
+     position.y += 16;
+-    renderer.drawText(16, position, 0xffffffffu, "DXVK-LL-GPLASYNC " DXVK_VERSION);
++    renderer.drawText(16, position, 0xffffffffu, "DXVK-AntiLag " DXVK_VERSION);
+ 
+     position.y += 8;
+     return position;
+diff --git a/src/util/util_fps_limiter.cpp b/src/util/util_fps_limiter.cpp
+index 4a126ac2..8d82423c 100644
+--- a/src/util/util_fps_limiter.cpp
++++ b/src/util/util_fps_limiter.cpp
+@@ -44,6 +44,7 @@ namespace dxvk {
+         m_heuristicEnable = false;
+ 
+         m_maxLatency = maxLatency;
++        m_maxFPS = frameRate;
+       }
+     }
+   }
+diff --git a/src/util/util_fps_limiter.h b/src/util/util_fps_limiter.h
+index 48e37364..dc923480 100644
+--- a/src/util/util_fps_limiter.h
++++ b/src/util/util_fps_limiter.h
+@@ -52,6 +52,8 @@ namespace dxvk {
+     inline static std::atomic<high_resolution_clock::time_point>
+       m_lastActive = { high_resolution_clock::now() };
+ 
++    uint32_t        m_maxFPS          = 0;
++
+   private:
+ 
+     using TimePoint = dxvk::high_resolution_clock::time_point;
+diff --git a/src/vulkan/vulkan_loader.h b/src/vulkan/vulkan_loader.h
+index b1b3adb1..a9c0c367 100644
+--- a/src/vulkan/vulkan_loader.h
++++ b/src/vulkan/vulkan_loader.h
+@@ -493,6 +493,10 @@ namespace dxvk::vk {
+     VULKAN_FN(vkGetLatencyTimingsNV);
+     VULKAN_FN(vkQueueNotifyOutOfBandNV);
+     #endif
++
++    #ifdef VK_AMD_anti_lag
++    VULKAN_FN(vkAntiLagUpdateAMD);
++    #endif
+   };
+   
+ }
+-- 
+2.51.0
+

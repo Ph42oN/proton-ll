@@ -1,0 +1,107 @@
+---
+ dlls/dinput/device.c         | 45 +++++++++++++++++++++++++++++++++++-
+ dlls/dinput/dinput_private.h |  4 +++-
+ 2 files changed, 47 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/dinput/device.c b/dlls/dinput/device.c
+index dec4d2926e..a0224f6c07 100644
+--- a/dlls/dinput/device.c
++++ b/dlls/dinput/device.c
+@@ -42,6 +42,8 @@
+ 
+ WINE_DEFAULT_DEBUG_CHANNEL(dinput);
+ 
++void antiLagIPCwait(struct dinput *dinput);
++
+ /* Windows uses this GUID for guidProduct on non-keyboard/mouse devices.
+  * Data1 contains the device VID (low word) and PID (high word).
+  * Data4 ends with the ASCII bytes "PIDVID".
+@@ -1457,6 +1459,9 @@ static HRESULT WINAPI dinput_device_GetDeviceState( IDirectInputDevice8W *iface,
+ 
+     if (!data) return DIERR_INVALIDPARAM;
+ 
++	if (impl->dinput->antiLag)
++	    antiLagIPCwait(impl->dinput);
++
+     IDirectInputDevice2_Poll( iface );
+ 
+     EnterCriticalSection( &impl->crit );
+@@ -1522,6 +1527,9 @@ static HRESULT WINAPI dinput_device_GetDeviceData( IDirectInputDevice8W *iface,
+         return DI_OK;
+     if (size < sizeof(DIDEVICEOBJECTDATA_DX3)) return DIERR_INVALIDPARAM;
+ 
++	if (This->dinput->antiLag)
++	    antiLagIPCwait(This->dinput);
++
+     IDirectInputDevice2_Poll(iface);
+     EnterCriticalSection(&This->crit);
+ 
+@@ -2135,6 +2143,39 @@ static const IDirectInputDevice8WVtbl dinput_device_w_vtbl =
+     dinput_device_GetImageInfo,
+ };
+ 
++void antiLagIPCinit(struct dinput *dinput) {
++	// Try to open the named pipe (waits until server is available)
++    dinput->alPipe = CreateFileA(
++        "\\\\.\\pipe\\AntiLag",
++        PIPE_ACCESS_DUPLEX,
++        0,            // no sharing
++        NULL,         // default security attributes
++        OPEN_EXISTING,// opens existing pipe
++        0,            // default attributes
++        NULL          // no template file
++    );
++
++    if (dinput->alPipe == INVALID_HANDLE_VALUE) {
++        WARN("Failed to open antilag IPC. Error: %lu\n", GetLastError());
++        return;
++	}
++	dinput->antiLag = 1;
++}
++void antiLagIPCwait(struct dinput *dinput) {
++	char out = 1, in;
++	DWORD bytes;
++	
++	WriteFile(dinput->alPipe, &out, 1, &bytes, NULL);
++    if (ReadFile(dinput->alPipe, &in, 1, &bytes, NULL)) {
++        TRACE("Received from server: %d", in);
++    } else {
++        TRACE("Failed to read from pipe. Error: %lu\n", GetLastError());
++	}
++}
++void antiLagIPCclose(struct dinput *dinput) {
++	CloseHandle(dinput->alPipe);
++}
++
+ void dinput_device_init( struct dinput_device *device, const struct dinput_device_vtbl *vtbl,
+                          const GUID *guid, struct dinput *dinput )
+ {
+@@ -2151,7 +2192,9 @@ void dinput_device_init( struct dinput_device *device, const struct dinput_devic
+     device->force_feedback_state = DIGFFS_STOPPED | DIGFFS_EMPTY;
+     InitializeCriticalSectionEx( &device->crit, 0, RTL_CRITICAL_SECTION_FLAG_FORCE_DEBUG_INFO );
+     dinput_internal_addref( (device->dinput = dinput) );
+-    device->vtbl = vtbl;
++	device->vtbl = vtbl;
++
++	antiLagIPCinit(dinput);
+ 
+     input_thread_add_user();
+ }
+diff --git a/dlls/dinput/dinput_private.h b/dlls/dinput/dinput_private.h
+index 433dfcf949..ad72a13b21 100644
+--- a/dlls/dinput/dinput_private.h
++++ b/dlls/dinput/dinput_private.h
+@@ -41,7 +41,9 @@ struct dinput
+ 
+     DWORD dwVersion;            /* direct input version number */
+     DWORD evsequence;           /* unique sequence number for events */
+-    struct list device_players; /* device instance guid to player name */
++	struct list device_players; /* device instance guid to player name */
++	BOOL antiLag;
++	HANDLE alPipe;
+ };
+ 
+ extern const IDirectInput7AVtbl dinput7_a_vtbl;
+-- 
+2.51.0
+
