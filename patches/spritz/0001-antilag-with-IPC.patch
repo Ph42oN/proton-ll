@@ -30,8 +30,8 @@ index dec4d2926e..a0224f6c07 100644
          return DI_OK;
      if (size < sizeof(DIDEVICEOBJECTDATA_DX3)) return DIERR_INVALIDPARAM;
  
-+	if (This->dinput->antiLag)
-+	    antiLagIPCwait(This->dinput);
++	//if (This->dinput->antiLag)
++	//    antiLagIPCwait(This->dinput);
 +
      IDirectInputDevice2_Poll(iface);
      EnterCriticalSection(&This->crit);
